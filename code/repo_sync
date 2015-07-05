@@ -597,7 +597,7 @@ def cleanUpTmpDir():
 
 
 TMPDIR = None
-def sync(fast_scan=False, download_packages=True):
+def sync(fast_scan=False, download_packages=True, selected=False):
     '''Syncs Apple's Software Updates with our local store.
     Returns a dictionary of products.'''
     global TMPDIR
@@ -635,7 +635,10 @@ def sync(fast_scan=False, download_packages=True):
             product_keys = list(catalog['Products'].keys())
             reposadocommon.print_stdout('%s products found in %s',
                 len(product_keys), catalog_url)
-            product_keys.sort()
+            if not selected:
+              product_keys.sort()
+            else:
+              product_keys = selected
             for product_key in product_keys:
                 if product_key in replicated_products:
                     products[product_key]['AppleCatalogs'].append(
@@ -784,6 +787,10 @@ def main():
                  help="""Recheck already downloaded packages for changes.""")
     parser.add_option('--log', dest='logfile', metavar='LOGFILE',
                  help="""Log all output to LOGFILE. No output to STDOUT.""")
+    parser.add_option('--refresh',action='store_true',
+                 help="""Overide download packages to false to populate database.""")
+    parser.add_option('--use-branch', dest='branch', metavar='BRANCH__NAME',
+                 help="""Use products within branch BRANCH_NAME""")
     options, unused_arguments = parser.parse_args()
     if reposadocommon.validPreferences():
         if not os.path.exists(reposadocommon.pref('CurlPath')):
@@ -794,13 +801,24 @@ def main():
             download_packages = False
         else:
             download_packages = True
+            if options.refresh:
+               reposadocommon.print_stderr('OVERRIDE: %s',
+                   disabling downloading of packages')
+               download_packages = False
         if options.logfile:
             reposadocommon.LOGFILE = options.logfile
         elif reposadocommon.pref('RepoSyncLogFile'):
             reposadocommon.LOGFILE = reposadocommon.pref('RepoSyncLogFile')
             
+
+        force_download = False
+        if options.branch:
+                catalog_branches = reposadocommon.getCatalogBranches()
+                if options.branch in catalog_branches:
+                        force_download = catalog_branches[options.branch]
+
         sync(fast_scan=(not options.recheck), 
-             download_packages=download_packages)
+             download_packages=download_packages,selected=force_download)
 
 
 if __name__ == '__main__':
