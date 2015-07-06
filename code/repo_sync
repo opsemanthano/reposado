@@ -609,7 +609,8 @@ def sync(fast_scan=False, download_packages=True, selected=False):
     products = reposadocommon.getProductInfo()
     
     # clear cached AppleCatalog listings
-    for item in products.keys():
+    if not selected:
+     for item in products.keys():
         products[item]['AppleCatalogs'] = []
     replicated_products = []
     
